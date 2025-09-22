@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Literal
 import pandas as pd
 import torch
 from sklearn.feature_extraction.text import TfidfTransformer
@@ -98,14 +98,22 @@ class DataSplitter:
         # generate user-item interaction matrix
         interactions = self._interactions_generator(trn)
 
-        # generate histories per user: {user: List}
+        # generate histories
         kwargs = dict(
             interactions=interactions,
+            target="user",
             max_hist=max_hist,
         )
-        histories = self._histories_generator(**kwargs)
+        user_hist = self._hist_generator(**kwargs)
 
-        return loaders, interactions, histories
+        kwargs = dict(
+            interactions=interactions,
+            target="item",
+            max_hist=max_hist,
+        )
+        item_hist = self._hist_generator(**kwargs)
+
+        return loaders, interactions, (user_hist, item_hist)
 
     def _interactions_generator(self, data):
         kwargs = dict(
@@ -129,50 +137,55 @@ class DataSplitter:
 
         return interactions
 
-    def _histories_generator(
+    def _hist_generator(
         self, 
         interactions: torch.Tensor, 
+        target: Literal['user', 'item'],
         max_hist: Optional[int]=None,
     ):
+        interactions = interactions if target=="user" else interactions.T
+        num_target = self.n_users if target=="user" else self.n_items
+        num_counterpart = self.n_items if target=="user" else self.n_users
+
         tfidf_dict = self._tfidf(interactions) if max_hist is not None else None
-        pos_per_user_list = []
+        pos_per_target_list = []
 
-        for user in range(self.n_users):
+        for target_idx in range(num_target):
             # user row (interaction 벡터)
-            user_row = interactions[user]
+            target_row = interactions[target_idx]
 
-            # interacted item indices
-            items = torch.nonzero(user_row, as_tuple=False).squeeze(-1)
+            # interacted counterpart indices
+            counterparts = torch.nonzero(target_row, as_tuple=False).squeeze(-1)
 
             # interaction X -> padding idx
-            if items.numel() == 0:
-                item_ids = torch.tensor([self.n_items], dtype=torch.long)
+            if counterparts.numel() == 0:
+                counterparts = torch.tensor([num_counterpart], dtype=torch.long)
             # interaction O
             else:
-                item_ids = items
                 # top-k based on tf-idf score
-                if max_hist is not None and len(items) > max_hist:
+                if max_hist is not None and len(counterparts) > max_hist:
                     # scores
                     kwargs = dict(
-                        data=[tfidf_dict.get((int(user), int(item)), 0.0) for item in items],
+                        data=[tfidf_dict.get((int(target_idx), int(counterpart_idx)), 0.0) for counterpart_idx in counterparts],
                         dtype=torch.float32,
                     )
                     scores = torch.tensor(**kwargs)
-                    # top-k idx selection
+                    # top-k idx
                     top_k_vals, top_k_indices = torch.topk(scores, k=max_hist)
-                    item_ids = item_ids[top_k_indices]
+                    # top-k idx selection
+                    counterparts = counterparts[top_k_indices]
 
-            pos_per_user_list.append(item_ids)
+            pos_per_target_list.append(counterparts)
 
         # padding
         kwargs = dict(
-            sequences=pos_per_user_list, 
+            sequences=pos_per_target_list, 
             batch_first=True, 
-            padding_value=self.n_items,
+            padding_value=num_counterpart,
         )
-        pos_per_user_padded = pad_sequence(**kwargs)
+        pos_per_target_padded = pad_sequence(**kwargs)
 
-        return pos_per_user_padded
+        return pos_per_target_padded
 
     def _tfidf(
         self, 
