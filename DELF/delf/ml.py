@@ -5,6 +5,7 @@ import torch.nn as nn
 class MatchingFunction(nn.Module):
     def __init__(
         self,
+        n_factors: int,
         hidden: list,
         dropout: float,
     ):
@@ -15,8 +16,12 @@ class MatchingFunction(nn.Module):
         del self.init_args["__class__"]
 
         # global attr
+        self.n_factors = n_factors
         self.hidden = hidden
         self.dropout = dropout
+
+        # debugging args error
+        self._assert_arg_error()
 
         # generate layers
         self._init_layers()
@@ -57,3 +62,8 @@ class MatchingFunction(nn.Module):
             yield nn.ReLU()
             yield nn.Dropout(self.dropout)
             idx += 1
+
+    def _assert_arg_error(self):
+        CONDITION = (self.hidden[0] == self.n_factors * 2)
+        ERROR_MESSAGE = f"First MLP layer must match input size: {self.n_factors * 2}"
+        assert CONDITION, ERROR_MESSAGE

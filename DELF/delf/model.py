@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
-from .embedding_function import EmbeddingFunction
-from .matching_function import MatchingFunction
+from .rl import RepresentationFunction
+from .ml import MatchingFunction
 
 
 class Module(nn.Module):
@@ -36,9 +36,6 @@ class Module(nn.Module):
             tensor=item_hist,
         )
 
-        # debugging args error
-        self._assert_arg_error()
-
         # generate layers
         self._init_layers()
 
@@ -72,7 +69,7 @@ class Module(nn.Module):
             user_idx=user_idx,
             item_idx=item_idx,
         )
-        id_cat, hist_cat, user_cat, item_cat = self.embedding_layer(**kwargs)
+        id_cat, hist_cat, user_cat, item_cat = self.rl(**kwargs)
 
         kwargs = dict(
             id_cat=id_cat,
@@ -80,7 +77,7 @@ class Module(nn.Module):
             user_cat=user_cat,
             item_cat=item_cat,
         )
-        pred_vector = self.matching_layer(**kwargs)
+        pred_vector = self.ml(**kwargs)
         
         logit = self.logit_layer(pred_vector).squeeze(-1)
         
@@ -94,21 +91,17 @@ class Module(nn.Module):
             user_hist=self.user_hist,
             item_hist=self.item_hist,
         )
-        self.embedding_layer = EmbeddingFunction(**kwargs)
+        self.rl = RepresentationFunction(**kwargs)
 
         kwargs = dict(
+            n_factors=self.n_factors,
             hidden=self.hidden,
             dropout=self.dropout,
         )
-        self.matching_layer = MatchingFunction(**kwargs)
+        self.ml = MatchingFunction(**kwargs)
 
         kwargs = dict(
             in_features=self.hidden[-1] * 4,
             out_features=1,
         )
         self.logit_layer = nn.Linear(**kwargs)
-
-    def _assert_arg_error(self):
-        CONDITION = (self.hidden[0] == self.n_factors * 2)
-        ERROR_MESSAGE = f"First MLP layer must match input size: {self.n_factors * 2}"
-        assert CONDITION, ERROR_MESSAGE

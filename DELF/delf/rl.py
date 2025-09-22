@@ -3,7 +3,7 @@ import torch.nn as nn
 from ..attn.model import AttentionMechanism
 
 
-class EmbeddingFunction(nn.Module):
+class RepresentationFunction(nn.Module):
     def __init__(
         self,
         n_users: int,
@@ -12,7 +12,7 @@ class EmbeddingFunction(nn.Module):
         user_hist: torch.Tensor,
         item_hist: torch.Tensor,
     ):
-        super(EmbeddingFunction, self).__init__()
+        super(RepresentationFunction, self).__init__()
         # attr dictionary for load
         self.init_args = locals().copy()
         del self.init_args["self"]
