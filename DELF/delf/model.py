@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
-from .rl import RepresentationFunction
-from .ml import MatchingFunction
+from . import rl, ml
 
 
 class Module(nn.Module):
@@ -91,14 +90,14 @@ class Module(nn.Module):
             user_hist=self.user_hist,
             item_hist=self.item_hist,
         )
-        self.rl = RepresentationFunction(**kwargs)
+        self.rl = rl.Module(**kwargs)
 
         kwargs = dict(
             n_factors=self.n_factors,
             hidden=self.hidden,
             dropout=self.dropout,
         )
-        self.ml = MatchingFunction(**kwargs)
+        self.ml = ml.Module(**kwargs)
 
         kwargs = dict(
             in_features=self.hidden[-1] * 4,

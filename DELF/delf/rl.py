@@ -3,7 +3,7 @@ import torch.nn as nn
 from ..attn.model import AttentionMechanism
 
 
-class RepresentationFunction(nn.Module):
+class Module(nn.Module):
     def __init__(
         self,
         n_users: int,
@@ -12,7 +12,7 @@ class RepresentationFunction(nn.Module):
         user_hist: torch.Tensor,
         item_hist: torch.Tensor,
     ):
-        super(RepresentationFunction, self).__init__()
+        super(Module, self).__init__()
         # attr dictionary for load
         self.init_args = locals().copy()
         del self.init_args["self"]
@@ -139,10 +139,6 @@ class RepresentationFunction(nn.Module):
         self.user_embed_hist = nn.Embedding(**kwargs)
         self.user_embed_global = nn.Parameter(torch.randn(self.n_factors))
 
-        nn.init.normal_(self.user_embed_target.weight, mean=0.0, std=0.01)
-        nn.init.normal_(self.user_embed_hist.weight, mean=0.0, std=0.01)
-        nn.init.normal_(self.user_embed_global, mean=0.0, std=0.01)
-
         kwargs = dict(
             num_embeddings=self.n_items+1, 
             embedding_dim=self.n_factors,
@@ -152,6 +148,9 @@ class RepresentationFunction(nn.Module):
         self.item_embed_hist = nn.Embedding(**kwargs)
         self.item_embed_global = nn.Parameter(torch.randn(self.n_factors))
 
+        nn.init.normal_(self.user_embed_target.weight, mean=0.0, std=0.01)
+        nn.init.normal_(self.user_embed_hist.weight, mean=0.0, std=0.01)
+        nn.init.normal_(self.user_embed_global, mean=0.0, std=0.01)
         nn.init.normal_(self.item_embed_target.weight, mean=0.0, std=0.01)
         nn.init.normal_(self.item_embed_hist.weight, mean=0.0, std=0.01)
         nn.init.normal_(self.item_embed_global, mean=0.0, std=0.01)
