@@ -81,6 +81,7 @@ class Module(nn.Module):
             mask=mask,
         )
         context = self.attn_u(**kwargs)
+
         return context
 
     def item_hist_embed(self, user_idx, item_idx):
