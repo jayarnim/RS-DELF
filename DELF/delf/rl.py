@@ -71,12 +71,13 @@ class Module(nn.Module):
         mask = self._mask_generator(**kwargs)
 
         query = self.user_embed_global.unsqueeze(0)
-        refer = self.item_embed_hist(refer_idx)
+        refer_v = self.item_embed_hist(refer_idx)
+        refer_k = self.proj_u(refer_v)
 
         kwargs = dict(
             Q=query,
-            K=self.proj_u(refer),
-            V=refer,
+            K=refer_k,
+            V=refer_v,
             mask=mask,
         )
         context = self.attn_u(**kwargs)
@@ -98,12 +99,13 @@ class Module(nn.Module):
         mask = self._mask_generator(**kwargs)
 
         query = self.item_embed_global.unsqueeze(0)
-        refer = self.user_embed_hist(refer_idx)
+        refer_v = self.user_embed_hist(refer_idx)
+        refer_k = self.proj_i(refer_v)
         
         kwargs = dict(
             Q=query,
-            K=self.proj_i(refer),
-            V=refer,
+            K=refer_k,
+            V=refer_v,
             mask=mask,
         )
         context = self.attn_i(**kwargs)
