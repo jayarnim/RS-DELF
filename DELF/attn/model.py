@@ -14,10 +14,8 @@ class AttentionMechanism(nn.Module):
         V: torch.Tensor,  # (B, H, D)
         mask: torch.Tensor,  # (B, H)
     ):
-        B_len, H_len, D_len = K.shape
-
         # Q: (B,D) -> (B,1,D) -> (B,H,D)
-        Q_exp = Q.unsqueeze(1).expand(B_len, H_len, D_len)
+        Q_exp = Q.unsqueeze(1).expand_as(K)
 
         # Attention scores: (B,H)
         scores = (Q_exp * K).sum(dim=-1)
