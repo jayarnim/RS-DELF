@@ -45,8 +45,8 @@ class Module(nn.Module):
         """
         user_id_embed = self.user_embed_target(user_idx)
         item_id_embed = self.item_embed_target(item_idx)
-        user_hist_embed = self.user_hist_embed(user_idx, item_idx)
-        item_hist_embed = self.item_hist_embed(user_idx, item_idx)
+        user_hist_embed = self.user_hist_embed_generator(user_idx, item_idx)
+        item_hist_embed = self.item_hist_embed_generator(user_idx, item_idx)
 
         id_cat = torch.cat([user_id_embed, item_id_embed], dim=-1)
         hist_cat = torch.cat([user_hist_embed, item_hist_embed], dim=-1)
@@ -55,7 +55,7 @@ class Module(nn.Module):
 
         return id_cat, hist_cat, user_cat, item_cat
 
-    def user_hist_embed(self, user_idx, item_idx):
+    def user_hist_embed_generator(self, user_idx, item_idx):
         kwargs = dict(
             target_idx=user_idx, 
             target_hist_idx=self.user_hist, 
@@ -84,7 +84,7 @@ class Module(nn.Module):
 
         return context
 
-    def item_hist_embed(self, user_idx, item_idx):
+    def item_hist_embed_generator(self, user_idx, item_idx):
         kwargs = dict(
             target_idx=item_idx, 
             target_hist_idx=self.item_hist, 
