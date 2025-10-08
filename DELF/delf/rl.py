@@ -116,11 +116,11 @@ class Module(nn.Module):
 
     def _mask_generator(self, hist_idx_slice, counterpart_idx, counterpart_padding_idx):
         # mask to current target item from history
-        marking_counterpart = hist_idx_slice == counterpart_idx.unsqueeze(1)
+        marking_counterpart_idx = hist_idx_slice == counterpart_idx.unsqueeze(1)
         # mask to padding
-        marking_padded = hist_idx_slice == counterpart_padding_idx
+        marking_padding_idx = hist_idx_slice == counterpart_padding_idx
         # final mask
-        mask = ~(marking_counterpart | marking_padded)
+        mask = ~(marking_counterpart_idx | marking_padding_idx)
         return mask
 
     def _hist_idx_slicer(self, target_hist, target_idx, counterpart_padding_idx):
