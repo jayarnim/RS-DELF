@@ -10,6 +10,7 @@ class Module(nn.Module):
         dropout: float,
     ):
         super(Module, self).__init__()
+
         # attr dictionary for load
         self.init_args = locals().copy()
         del self.init_args["self"]
@@ -24,7 +25,7 @@ class Module(nn.Module):
         self._assert_arg_error()
 
         # generate layers
-        self._init_layers()
+        self._set_up_components()
 
     def forward(
         self, 
@@ -40,21 +41,23 @@ class Module(nn.Module):
         pred_vector = torch.cat([pred_vec_id, pred_vec_hist, pred_vec_user, pred_vec_item], dim=-1)
         return pred_vector
 
-    def _init_layers(self):
-        self.mlp_id = nn.Sequential(
-            *list(self._generate_layers(self.hidden))
-        )
-        self.mlp_hist = nn.Sequential(
-            *list(self._generate_layers(self.hidden))
-        )
-        self.mlp_user = nn.Sequential(
-            *list(self._generate_layers(self.hidden))
-        )
-        self.mlp_item = nn.Sequential(
-            *list(self._generate_layers(self.hidden))
-        )
+    def _set_up_components(self):
+        self._create_layers()
 
-    def _generate_layers(self, hidden):
+    def _create_layers(self):
+        components = list(self._yield_layers(self.hidden))
+        self.mlp_id = nn.Sequential(*components)
+
+        components = list(self._yield_layers(self.hidden))
+        self.mlp_hist = nn.Sequential(*components)
+
+        components = list(self._yield_layers(self.hidden))
+        self.mlp_user = nn.Sequential(*components)
+
+        components = list(self._yield_layers(self.hidden))
+        self.mlp_item = nn.Sequential(*components)
+
+    def _yield_layers(self, hidden):
         idx = 1
         while idx < len(hidden):
             yield nn.Linear(hidden[idx-1], hidden[idx])

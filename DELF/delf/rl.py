@@ -13,6 +13,7 @@ class Module(nn.Module):
         item_hist: torch.Tensor,
     ):
         super(Module, self).__init__()
+
         # attr dictionary for load
         self.init_args = locals().copy()
         del self.init_args["self"]
@@ -32,7 +33,7 @@ class Module(nn.Module):
         )
 
         # generate layers
-        self._init_layers()
+        self._set_up_components()
 
     def forward(
         self, 
@@ -57,16 +58,16 @@ class Module(nn.Module):
 
     def user_hist_embed_generator(self, user_idx, item_idx):
         kwargs = dict(
+            target_hist=self.user_hist, 
             target_idx=user_idx, 
-            target_hist_idx=self.user_hist, 
-            counterpart_padding_value=self.n_items,
+            counterpart_padding_idx=self.n_items,
         )
         refer_idx = self._hist_idx_slicer(**kwargs)
 
         kwargs = dict(
+            hist_idx_slice=refer_idx,
             counterpart_idx=item_idx, 
-            target_hist_idx_slice=refer_idx,
-            counterpart_padding_value=self.n_items,
+            counterpart_padding_idx=self.n_items,
         )
         mask = self._mask_generator(**kwargs)
 
@@ -86,16 +87,16 @@ class Module(nn.Module):
 
     def item_hist_embed_generator(self, user_idx, item_idx):
         kwargs = dict(
+            target_hist=self.item_hist, 
             target_idx=item_idx, 
-            target_hist_idx=self.item_hist, 
-            counterpart_padding_value=self.n_users,
+            counterpart_padding_idx=self.n_users,
         )
         refer_idx = self._hist_idx_slicer(**kwargs)
 
         kwargs = dict(
+            hist_idx_slice=refer_idx,
             counterpart_idx=user_idx, 
-            target_hist_idx_slice=refer_idx,
-            counterpart_padding_value=self.n_users,
+            counterpart_padding_idx=self.n_users,
         )
         mask = self._mask_generator(**kwargs)
 
@@ -113,26 +114,35 @@ class Module(nn.Module):
 
         return context
 
-    def _mask_generator(self, counterpart_idx, target_hist_idx_slice, counterpart_padding_value):
+    def _mask_generator(self, hist_idx_slice, counterpart_idx, counterpart_padding_idx):
         # mask to current target item from history
-        mask_counterpart = target_hist_idx_slice == counterpart_idx.unsqueeze(1)
+        marking_counterpart = hist_idx_slice == counterpart_idx.unsqueeze(1)
         # mask to padding
-        mask_padded = target_hist_idx_slice == counterpart_padding_value
+        marking_padded = hist_idx_slice == counterpart_padding_idx
         # final mask
-        mask = mask_counterpart | mask_padded
+        mask = ~(marking_counterpart | marking_padded)
         return mask
 
-    def _hist_idx_slicer(self, target_idx, target_hist_idx, counterpart_padding_value):
+    def _hist_idx_slicer(self, target_hist, target_idx, counterpart_padding_idx):
         # target hist slice
-        target_hist_idx_slice = target_hist_idx[target_idx]
+        hist_idx_slice = target_hist[target_idx]
         # calculate max hist in batch
-        lengths = (target_hist_idx_slice != counterpart_padding_value).sum(dim=1)
+        lengths = (hist_idx_slice != counterpart_padding_idx).sum(dim=1)
         max_len = lengths.max().item()
         # drop padding values
-        target_hist_idx_slice_trunc = target_hist_idx_slice[:, :max_len]
-        return target_hist_idx_slice_trunc
+        hist_idx_slice_trunc = hist_idx_slice[:, :max_len]
+        return hist_idx_slice_trunc
 
-    def _init_layers(self):
+    def _set_up_components(self):
+        self._create_modules()
+        self._create_embeddings()
+        self._create_layers()
+
+    def _create_modules(self):
+        self.attn_u = AttentionMechanism()
+        self.attn_i = AttentionMechanism()
+
+    def _create_embeddings(self):
         kwargs = dict(
             num_embeddings=self.n_users+1, 
             embedding_dim=self.n_factors,
@@ -151,13 +161,7 @@ class Module(nn.Module):
         self.item_embed_hist = nn.Embedding(**kwargs)
         self.item_embed_global = nn.Parameter(torch.randn(self.n_factors))
 
-        nn.init.normal_(self.user_embed_target.weight, mean=0.0, std=0.01)
-        nn.init.normal_(self.user_embed_hist.weight, mean=0.0, std=0.01)
-        nn.init.normal_(self.user_embed_global, mean=0.0, std=0.01)
-        nn.init.normal_(self.item_embed_target.weight, mean=0.0, std=0.01)
-        nn.init.normal_(self.item_embed_hist.weight, mean=0.0, std=0.01)
-        nn.init.normal_(self.item_embed_global, mean=0.0, std=0.01)
-
+    def _create_layers(self):
         self.proj_u = nn.Sequential(
             nn.Linear(self.n_factors, self.n_factors),
             nn.Tanh(),
@@ -166,6 +170,3 @@ class Module(nn.Module):
             nn.Linear(self.n_factors, self.n_factors),
             nn.Tanh(),
         )
-
-        self.attn_u = AttentionMechanism()
-        self.attn_i = AttentionMechanism()
