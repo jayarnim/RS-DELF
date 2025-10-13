@@ -12,12 +12,7 @@ class Module(nn.Module):
         user_hist: torch.Tensor,
         item_hist: torch.Tensor,
     ):
-        super(Module, self).__init__()
-
-        # attr dictionary for load
-        self.init_args = locals().copy()
-        del self.init_args["self"]
-        del self.init_args["__class__"]
+        super().__init__()
 
         # global attr
         self.n_users = n_users
@@ -40,10 +35,6 @@ class Module(nn.Module):
         user_idx: torch.Tensor, 
         item_idx: torch.Tensor,
     ):
-        """
-        user_idx: (B,)
-        item_idx: (B,)
-        """
         user_id_embed = self.user_embed_target(user_idx)
         item_id_embed = self.item_embed_target(item_idx)
         user_hist_embed = self.user_hist_embed_generator(user_idx, item_idx)
@@ -136,6 +127,7 @@ class Module(nn.Module):
     def _set_up_components(self):
         self._create_modules()
         self._create_embeddings()
+        self._init_embeddings()
         self._create_layers()
 
     def _create_modules(self):
@@ -160,6 +152,14 @@ class Module(nn.Module):
         self.item_embed_target = nn.Embedding(**kwargs)
         self.item_embed_hist = nn.Embedding(**kwargs)
         self.item_embed_global = nn.Parameter(torch.randn(self.n_factors))
+
+    def _init_embeddings(self):
+        nn.init.normal_(self.user_embed_target.weight, mean=0.0, std=0.01)
+        nn.init.normal_(self.user_embed_hist.weight, mean=0.0, std=0.01)
+        nn.init.normal_(self.user_embed_global, mean=0.0, std=0.01)
+        nn.init.normal_(self.item_embed_target.weight, mean=0.0, std=0.01)
+        nn.init.normal_(self.item_embed_hist.weight, mean=0.0, std=0.01)
+        nn.init.normal_(self.item_embed_global, mean=0.0, std=0.01)
 
     def _create_layers(self):
         self.proj_u = nn.Sequential(

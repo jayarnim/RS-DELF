@@ -9,12 +9,7 @@ class Module(nn.Module):
         hidden: list,
         dropout: float,
     ):
-        super(Module, self).__init__()
-
-        # attr dictionary for load
-        self.init_args = locals().copy()
-        del self.init_args["self"]
-        del self.init_args["__class__"]
+        super().__init__()
 
         # global attr
         self.n_factors = n_factors
@@ -34,10 +29,10 @@ class Module(nn.Module):
         user_cat: torch.Tensor,
         item_cat: torch.Tensor,
     ):
-        pred_vec_id = self.mlp_id(id_cat)
-        pred_vec_hist = self.mlp_hist(hist_cat)
-        pred_vec_user = self.mlp_user(user_cat)
-        pred_vec_item = self.mlp_item(item_cat)
+        pred_vec_id = self.matching_fn_id(id_cat)
+        pred_vec_hist = self.matching_fn_hist(hist_cat)
+        pred_vec_user = self.matching_fn_user(user_cat)
+        pred_vec_item = self.matching_fn_item(item_cat)
         pred_vector = torch.cat([pred_vec_id, pred_vec_hist, pred_vec_user, pred_vec_item], dim=-1)
         return pred_vector
 
@@ -46,16 +41,16 @@ class Module(nn.Module):
 
     def _create_layers(self):
         components = list(self._yield_layers(self.hidden))
-        self.mlp_id = nn.Sequential(*components)
+        self.matching_fn_id = nn.Sequential(*components)
 
         components = list(self._yield_layers(self.hidden))
-        self.mlp_hist = nn.Sequential(*components)
+        self.matching_fn_hist = nn.Sequential(*components)
 
         components = list(self._yield_layers(self.hidden))
-        self.mlp_user = nn.Sequential(*components)
+        self.matching_fn_user = nn.Sequential(*components)
 
         components = list(self._yield_layers(self.hidden))
-        self.mlp_item = nn.Sequential(*components)
+        self.matching_fn_item = nn.Sequential(*components)
 
     def _yield_layers(self, hidden):
         idx = 1
